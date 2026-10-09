@@ -144,10 +144,32 @@
       #totalRange{white-space:normal}
     }
     @media (max-width: 640px){
-      .shell{width:min(100%,calc(100% - 24px));margin:24px auto 38px}
+      html,body{max-width:100%;overflow-x:hidden}
+      .shell{width:calc(100% - 24px);margin:20px auto 32px}
+      .screen-heading{margin-bottom:24px}
+      h1{font-size:clamp(25px,7vw,32px);overflow-wrap:anywhere}
+      .workspace{grid-template-columns:minmax(0,1fr);gap:25px}
+      .side-card,.main-card,.result-panel,.tblwrap{width:100%;min-width:0}
+      .counter{width:100%;grid-template-columns:44px minmax(0,1fr) 44px}
+      .overview{padding:15px 14px;gap:14px}
+      .metric strong{font-size:clamp(18px,5.5vw,25px);overflow-wrap:anywhere}
+      #totalRange{font-size:clamp(17px,5.1vw,23px);white-space:normal}
+      .tblwrap{overflow-x:visible}
+      .result-panel table{min-width:0;width:100%;display:block}
+      .result-panel thead{display:none}
+      .result-panel tbody{display:grid;gap:8px}
+      .result-panel tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--white)}
+      .result-panel td{display:block;padding:0!important;border:0!important;text-align:left!important;min-width:0;overflow-wrap:anywhere}
+      .result-panel td:first-child{grid-column:1 / -1;font-weight:700}
+      .result-panel td:nth-child(2)::before{content:"Штук: ";color:var(--muted);font-size:12px;font-weight:400}
+      .result-panel td:nth-child(3){grid-column:1 / -1;font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}
+      .result-panel td:nth-child(3)::before{content:"Стоимость: ";font-weight:400;color:var(--muted);font-size:12px}
+      .result-panel tr.grand{background:var(--soft-2);border-color:#b7d0c9}
+      .result-panel tr.grand td{font-size:15px}
       .footer{grid-template-columns:1fr}
-      .save{width:100%}
-      table{min-width:520px}
+      .save{width:100%;white-space:normal}
+      /* PDF по-прежнему получает обычную широкую таблицу,
+         поскольку создаётся как отдельный .pdf-document. */
     }
 
     @page{size:A4;margin:17mm}
