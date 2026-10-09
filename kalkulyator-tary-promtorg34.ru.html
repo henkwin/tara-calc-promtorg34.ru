@@ -155,17 +155,19 @@
       .metric strong{font-size:clamp(18px,5.5vw,25px);overflow-wrap:anywhere}
       #totalRange{font-size:clamp(17px,5.1vw,23px);white-space:normal}
       .tblwrap{overflow-x:visible}
-      .result-panel table{min-width:0;width:100%;display:block}
+      /* Мобильная таблица: позиция, количество и цена в одной строке */
+      .result-panel table{width:100%;min-width:0;table-layout:fixed;display:table}
       .result-panel thead{display:none}
-      .result-panel tbody{display:grid;gap:8px}
-      .result-panel tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--white)}
-      .result-panel td{display:block;padding:0!important;border:0!important;text-align:left!important;min-width:0;overflow-wrap:anywhere}
-      .result-panel td:first-child{grid-column:1 / -1;font-weight:700}
-      .result-panel td:nth-child(2)::before{content:"Штук: ";color:var(--muted);font-size:12px;font-weight:400}
-      .result-panel td:nth-child(3){grid-column:1 / -1;font-size:14px;font-weight:650;font-variant-numeric:tabular-nums}
-      .result-panel td:nth-child(3)::before{content:"Стоимость: ";font-weight:400;color:var(--muted);font-size:12px}
-      .result-panel tr.grand{background:var(--soft-2);border-color:#b7d0c9}
-      .result-panel tr.grand td{font-size:15px}
+      .result-panel tbody{display:table-row-group}
+      .result-panel tr{display:table-row;background:var(--white)}
+      .result-panel td{display:table-cell!important;padding:12px 5px!important;border-bottom:1px solid var(--line)!important;vertical-align:middle;overflow-wrap:normal}
+      .result-panel td:first-child{width:25%;font-size:12px;font-weight:700;text-align:left!important;white-space:normal}
+      .result-panel td:nth-child(2){width:13%;font-size:12px;text-align:center!important;white-space:nowrap}
+      .result-panel td:nth-child(3){width:62%;font-size:clamp(10px,2.85vw,13px);font-weight:650;letter-spacing:-.025em;text-align:right!important;white-space:nowrap}
+      .result-panel td:nth-child(2)::before,.result-panel td:nth-child(3)::before{content:none!important}
+      .result-panel tr.grand{background:var(--soft-2)}
+      .result-panel tr.grand td{font-size:clamp(10px,2.85vw,13px);border-top:2px solid #b7d0c9!important}
+      .result-panel tr.grand td:first-child{font-weight:800}
       .footer{grid-template-columns:1fr}
       .save{width:100%;white-space:normal}
       /* PDF по-прежнему получает обычную широкую таблицу,
