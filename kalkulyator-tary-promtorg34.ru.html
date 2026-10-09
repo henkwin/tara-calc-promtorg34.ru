@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Калькулятор оптовой стоимости стеклотары</title>
+
+  <!-- ===========================================================
+       СЛУЖЕБНЫЕ НАСТРОЙКИ — РЕДАКТИРУЙТЕ ТОЛЬКО ЗНАЧЕНИЯ НИЖЕ
+       Цены указаны в рублях ЗА ОДНУ банку/бутылку или крышку.
+       По исходной таблице: тара 41–45,15 ₽, крышка 8,20 ₽.
+       =========================================================== -->
+  <script>
+    const CONFIG = {
+      priceMin: 41.00,
+      priceMax: 45.15,
+      lidPriceMin: 8.20,
+      lidPriceMax: 8.20,
+      unitsPerPack: 9,
+      unitsPerPallet: 729,
+      unitsPerTruck: 18954,
+      article: 'A132.III-2-82-1500',
+      currency: '₽'
+    };
+  </script>
+
+  <style>
+    :root{
+      color-scheme:light;
+      --ink:#10243f;
+      --muted:#64748b;
+      --primary:#1d746d;
+      --primary-dark:#155952;
+      --line:#d7e2e4;
+      --canvas:#f4f6f6;
+      --soft:#e8f0ee;
+      --soft-2:#edf4f2;
+      --white:#fff;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--canvas);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:var(--ink)}
+    .shell{width:min(1060px,calc(100% - 40px));margin:34px auto 52px}
+    .screen-heading{margin-bottom:28px}
+    .eyebrow{margin:0 0 6px;font-size:12px;letter-spacing:.12em;font-weight:800;text-transform:uppercase;color:var(--primary)}
+    h1{margin:0 0 10px;font-size:clamp(28px,4vw,38px);line-height:1.12;letter-spacing:-.03em}
+    .intro{margin:0;color:var(--muted);font-size:15px}
+
+    .workspace{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;align-items:start}
+    .col-title{margin:0 0 18px;font-size:20px;line-height:1.2;letter-spacing:-.02em}
+
+    .side-card,.main-card{min-width:0}
+    .control-list{display:flex;flex-direction:column;gap:26px}
+    .field-title{display:block;font-size:16px;font-weight:800;margin:0 0 10px}
+    .sub{display:block;margin-top:7px;font-size:13px;color:var(--muted)}
+
+    .counter{
+      display:grid;
+      grid-template-columns:44px minmax(0,1fr) 44px;
+      align-items:stretch;
+      height:48px;
+      border:1px solid #bcced1;
+      border-radius:12px;
+      overflow:hidden;
+      background:var(--white);
+    }
+    .counter button{
+      border:0;
+      margin:0;
+      background:#edf2f2;
+      color:var(--ink);
+      font:700 28px/1 system-ui;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+    }
+    .counter button:hover{background:#dfe7e7}
+    .counter input{
+      width:100%;
+      min-width:0;
+      border:0;
+      outline:none;
+      background:var(--white);
+      text-align:center;
+      font:800 17px/1 system-ui;
+      color:var(--ink);
+      padding:0 8px;
+      appearance:textfield;
+      -moz-appearance:textfield;
+    }
+    .counter input::-webkit-outer-spin-button,
+    .counter input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+    .options{margin-top:28px;padding-top:6px}
+    .checkbox{display:flex;align-items:flex-start;gap:12px;font-size:16px;font-weight:800;cursor:pointer}
+    .checkbox input{width:20px;height:20px;margin-top:2px;accent-color:var(--primary);flex:0 0 auto}
+
+    .result-panel{min-width:0}
+    .overview{
+      display:grid;
+      grid-template-columns:190px minmax(0,1fr);
+      gap:14px;
+      margin-bottom:22px;
+      background:var(--soft);
+      border-radius:14px;
+      padding:18px 20px;
+    }
+    .metric .small{display:block;font-size:13px;color:#547271;margin-bottom:6px}
+    .metric strong{display:block;font-size:clamp(19px,2.05vw,24px);line-height:1.15;font-weight:800;font-variant-numeric:tabular-nums}
+
+    #totalRange{white-space:nowrap;font-size:clamp(18px,1.85vw,22px)}
+    .tblwrap{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;min-width:580px;background:transparent}
+    th{padding:14px 12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted);font-weight:800;text-align:left;background:#eef3f3}
+    td{padding:15px 12px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+    th:nth-child(2), td:nth-child(2){text-align:right}
+    th:nth-child(3), td:nth-child(3){text-align:right}
+    .grand{background:var(--soft-2);font-weight:800}
+    .grand td{border-top:2px solid #bdd4cf;border-bottom:0;font-size:15px}
+    .grand td:last-child{white-space:nowrap}
+
+    .footer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end;margin-top:22px}
+    .hint{margin:0;color:var(--muted);font-size:13px;max-width:540px}
+    .save{border:0;border-radius:12px;background:var(--primary);color:#fff;padding:15px 22px;font:800 15px/1.2 system-ui;cursor:pointer;white-space:nowrap}
+    .save:hover{background:var(--primary-dark)}
+
+    .printhead,.printmeta{display:none}
+    .save:disabled{opacity:.65;cursor:wait}
+    .pdf-document{width:760px;background:#fff;color:#10243f;padding:30px;font:15px/1.5 Arial,sans-serif}
+    .pdf-document h2{font-size:24px;line-height:1.25;margin:0 0 16px}
+    .pdf-document .pdf-meta{margin:0 0 20px;line-height:1.85}
+    .pdf-document .pdf-summary{padding:16px 18px;margin:0 0 20px;border-radius:8px;background:#e8f0ee}
+    .pdf-document .pdf-summary strong{display:block;font-size:20px}
+    .pdf-document table{width:100%;min-width:0;border-collapse:collapse;font-size:13px}
+    .pdf-document th,.pdf-document td{padding:10px 7px;border-bottom:1px solid #d7e2e4}
+    .pdf-document .grand{background:#edf4f2}
+    .pdf-document .grand td{font-size:13px}
+    .pdf-document .pdf-note{margin:16px 0 0;color:#64748b;font-size:12px}
+
+    @media (max-width: 900px){
+      .workspace{grid-template-columns:1fr;gap:28px}
+      .overview{grid-template-columns:1fr}
+      #totalRange{white-space:normal}
+    }
+    @media (max-width: 640px){
+      .shell{width:min(100%,calc(100% - 24px));margin:24px auto 38px}
+      .footer{grid-template-columns:1fr}
+      .save{width:100%}
+      table{min-width:520px}
+    }
+
+    @page{size:A4;margin:17mm}
+    @media print{
+      body{background:#fff;color:#000;font-size:12px}
+      .shell{width:100%;max-width:none;margin:0}
+      .screen-heading,.side-card,.footer{display:none!important}
+      .workspace{display:block}
+      .printhead,.printmeta{display:block}
+      .printhead{font-size:22px;font-weight:800;margin:0 0 12px}
+      .printmeta{margin:0 0 18px;line-height:1.8}
+      .printmeta b{display:inline-block;min-width:120px}
+      .col-title{display:none}
+      .overview{background:#fff;border:1px solid #aaa;padding:14px 16px;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+      .tblwrap{overflow:visible}
+      table{min-width:0}
+      th,td{padding:10px 6px}
+      .grand{background:#eee!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="screen-heading">
+      <p class="eyebrow">Оптовая поставка стеклотары</p>
+      <h1>Калькулятор стоимости заказа</h1>
+      <p class="intro">Выберите количество паллет, пакетов и фур. Расчёт обновляется автоматически.</p>
+    </header>
+
+    <div class="workspace">
+      <section class="side-card input-panel" aria-label="Параметры заказа">
+        <h2 class="col-title">Параметры заказа</h2>
+        <div class="control-list">
+          <label class="field">
+            <span class="field-title">Паллеты</span>
+            <span class="counter">
+              <button type="button" data-step="-1" data-target="pallets" aria-label="Уменьшить количество паллет">−</button>
+              <input id="pallets" type="number" min="1" step="1" value="1" inputmode="numeric">
+              <button type="button" data-step="1" data-target="pallets" aria-label="Увеличить количество паллет">+</button>
+            </span>
+            <small class="sub"><span id="palletSize"></span> шт. в паллете · минимум 1</small>
+          </label>
+
+          <label class="field">
+            <span class="field-title">Пакеты</span>
+            <span class="counter">
+              <button type="button" data-step="-1" data-target="packs" aria-label="Уменьшить количество пакетов">−</button>
+              <input id="packs" type="number" min="0" step="1" value="0" inputmode="numeric">
+              <button type="button" data-step="1" data-target="packs" aria-label="Увеличить количество пакетов">+</button>
+            </span>
+            <small class="sub"><span id="packSize"></span> шт. в пакете</small>
+          </label>
+
+          <label class="field">
+            <span class="field-title">Фуры</span>
+            <span class="counter">
+              <button type="button" data-step="-1" data-target="trucks" aria-label="Уменьшить количество фур">−</button>
+              <input id="trucks" type="number" min="0" step="1" value="0" inputmode="numeric">
+              <button type="button" data-step="1" data-target="trucks" aria-label="Увеличить количество фур">+</button>
+            </span>
+            <small class="sub"><span id="truckSize"></span> шт. в фуре</small>
+          </label>
+        </div>
+
+        <div class="options">
+          <label class="checkbox"><input id="lids" type="checkbox">Нужны крышки (1 крышка на 1 шт. тары)</label>
+        </div>
+      </section>
+
+      <section class="main-card result-panel" aria-label="Расчёт стоимости">
+        <div class="printhead">Предварительный расчёт стоимости стеклотары</div>
+        <div class="printmeta">
+          <div><b>Артикул:</b> <span id="printArticle"></span></div>
+          <div><b>Дата расчёта:</b> <span id="printDate"></span></div>
+          <div><b>Крышки:</b> <span id="printLids"></span></div>
+        </div>
+
+        <h2 class="col-title">Стоимость заказа</h2>
+
+        <div class="overview">
+          <div class="metric">
+            <span class="small">Всего банок / бутылок</span>
+            <strong id="totalUnits">729 шт.</strong>
+          </div>
+          <div class="metric">
+            <span class="small">Итоговая ориентировочная стоимость</span>
+            <strong id="totalRange">—</strong>
+          </div>
+        </div>
+
+        <div class="tblwrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Позиция</th>
+                <th>Количество тары, шт.</th>
+                <th>Стоимость, от — до</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td id="palletLabel">Паллеты (1)</td><td id="palletUnits"></td><td id="palletCost"></td></tr>
+              <tr><td id="packLabel">Пакеты (0)</td><td id="packUnits"></td><td id="packCost"></td></tr>
+              <tr><td id="truckLabel">Фуры (0)</td><td id="truckUnits"></td><td id="truckCost"></td></tr>
+              <tr><td id="lidLabel">Крышки (не выбраны)</td><td id="lidUnits"></td><td id="lidCost"></td></tr>
+              <tr class="grand"><td>Итого</td><td id="grandUnits"></td><td id="grandCost"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <p class="hint">Расчёт предварительный. Паллеты, пакеты и фуры складываются как отдельные объёмы заказа. Кнопка «Сохранить в PDF» сразу скачивает расчёт с артикулом товара.</p>
+          <button class="save" id="savePdf" type="button">Сохранить в PDF</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Библиотека для скачивания PDF без диалога печати; при первом открытии нужен интернет. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script>
+    'use strict';
+    const $ = id => document.getElementById(id);
+    const countFormat = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0});
+    const moneyFormat = new Intl.NumberFormat('ru-RU', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const money = number => moneyFormat.format(Math.round((number + Number.EPSILON) * 100) / 100) + ' ' + CONFIG.currency;
+    const range = (min,max) => money(min) + ' — ' + money(max);
+    const count = number => countFormat.format(number);
+
+    function getCount(id) {
+      const min = id === 'pallets' ? 1 : 0;
+      const raw = Number($(id).value);
+      return Number.isFinite(raw) ? Math.max(min, Math.trunc(raw)) : min;
+    }
+
+    function writeRow(prefix, countOfUnits, minPrice, maxPrice) {
+      $(prefix + 'Units').textContent = count(countOfUnits);
+      $(prefix + 'Cost').textContent = range(countOfUnits * minPrice, countOfUnits * maxPrice);
+    }
+
+    function recalculate() {
+      const pallets = getCount('pallets');
+      const packs = getCount('packs');
+      const trucks = getCount('trucks');
+      const palletUnits = pallets * CONFIG.unitsPerPallet;
+      const packUnits = packs * CONFIG.unitsPerPack;
+      const truckUnits = trucks * CONFIG.unitsPerTruck;
+      const total = palletUnits + packUnits + truckUnits;
+      const includeLids = $('lids').checked;
+      const lidsUnits = includeLids ? total : 0;
+      const low = total * CONFIG.priceMin + lidsUnits * CONFIG.lidPriceMin;
+      const high = total * CONFIG.priceMax + lidsUnits * CONFIG.lidPriceMax;
+
+      $('palletLabel').textContent = `Паллеты (${count(pallets)})`;
+      $('packLabel').textContent = `Пакеты (${count(packs)})`;
+      $('truckLabel').textContent = `Фуры (${count(trucks)})`;
+      $('lidLabel').textContent = includeLids ? 'Крышки' : 'Крышки (не выбраны)';
+
+      writeRow('pallet', palletUnits, CONFIG.priceMin, CONFIG.priceMax);
+      writeRow('pack', packUnits, CONFIG.priceMin, CONFIG.priceMax);
+      writeRow('truck', truckUnits, CONFIG.priceMin, CONFIG.priceMax);
+      writeRow('lid', lidsUnits, CONFIG.lidPriceMin, CONFIG.lidPriceMax);
+
+      $('totalUnits').textContent = count(total) + ' шт.';
+      $('totalRange').textContent = range(low, high);
+      $('grandUnits').textContent = count(total);
+      $('grandCost').textContent = range(low, high);
+      $('printLids').textContent = includeLids ? `Да, ${count(lidsUnits)} шт.` : 'Нет';
+      $('printArticle').textContent = CONFIG.article;
+      $('printDate').textContent = new Date().toLocaleDateString('ru-RU');
+    }
+
+    ['pallets','packs','trucks'].forEach(id => {
+      $(id).addEventListener('input', recalculate);
+      $(id).addEventListener('change', () => {
+        $(id).value = getCount(id);
+        recalculate();
+      });
+    });
+
+    document.querySelectorAll('[data-step]').forEach(button => {
+      button.addEventListener('click', () => {
+        const id = button.dataset.target;
+        $(id).value = Math.max(id === 'pallets' ? 1 : 0, getCount(id) + Number(button.dataset.step));
+        recalculate();
+      });
+    });
+
+    $('lids').addEventListener('change', recalculate);
+    $('savePdf').addEventListener('click', async () => {
+      if (!String(CONFIG.article || '').trim()) {
+        alert('Укажите артикул в настройках CONFIG.article перед сохранением PDF.');
+        return;
+      }
+      if (typeof html2pdf !== 'function') {
+        alert('Для формирования PDF необходимо подключение к интернету: не загрузилась библиотека генерации PDF.');
+        return;
+      }
+
+      ['pallets','packs','trucks'].forEach(id => { $(id).value = getCount(id); });
+      recalculate();
+      const button = $('savePdf');
+      button.disabled = true;
+      button.textContent = 'Создаём PDF…';
+
+      // Отдельная аккуратная печатная форма, которая не зависит от ширины экрана.
+      const pdf = document.createElement('div');
+      pdf.className = 'pdf-document';
+      pdf.style.position = 'absolute';
+      pdf.style.left = '-10000px';
+      pdf.style.top = '0';
+      const heading = document.createElement('h2');
+      heading.textContent = 'Предварительный расчёт стоимости стеклотары';
+      pdf.appendChild(heading);
+
+      const meta = document.createElement('div');
+      meta.className = 'pdf-meta';
+      const addMeta = (label, value) => {
+        const line = document.createElement('div');
+        const bold = document.createElement('b');
+        bold.textContent = label + ' ';
+        line.append(bold, document.createTextNode(value));
+        meta.appendChild(line);
+      };
+      addMeta('Артикул:', String(CONFIG.article));
+      addMeta('Дата расчёта:', $('printDate').textContent);
+      addMeta('Паллеты:', $("pallets").value);
+      addMeta('Пакеты:', $("packs").value);
+      addMeta('Фуры:', $("trucks").value);
+      addMeta('Крышки:', $('printLids').textContent);
+      pdf.appendChild(meta);
+
+      const summary = document.createElement('div');
+      summary.className = 'pdf-summary';
+      const unitsLine = document.createElement('div');
+      unitsLine.textContent = 'Всего банок / бутылок: ' + $('totalUnits').textContent;
+      const costLine = document.createElement('strong');
+      costLine.textContent = 'Итого: ' + $('totalRange').textContent;
+      summary.append(unitsLine, costLine);
+      pdf.appendChild(summary);
+
+      pdf.appendChild(document.querySelector('.tblwrap table').cloneNode(true));
+      const note = document.createElement('p');
+      note.className = 'pdf-note';
+      note.textContent = 'Ориентировочный расчёт, не является публичной офертой. Паллеты, пакеты и фуры суммируются как отдельные объёмы заказа.';
+      pdf.appendChild(note);
+      document.body.appendChild(pdf);
+      const safeArticle = String(CONFIG.article).replace(/[^A-Za-zА-Яа-яЁё0-9._-]/g, '_').slice(0, 80);
+      const fileName = 'raschet-' + safeArticle + '-' + new Date().toISOString().slice(0, 10) + '.pdf';
+      try {
+        await html2pdf().set({
+          margin: 9,
+          filename: fileName,
+          image: {type:'jpeg', quality:0.98},
+          html2canvas: {scale:2, backgroundColor:'#ffffff', scrollX:0, scrollY:0},
+          jsPDF: {unit:'mm', format:'a4', orientation:'portrait'},
+          pagebreak: {mode:['avoid-all','css','legacy']}
+        }).from(pdf).save();
+      } catch (error) {
+        console.error('Ошибка создания PDF:', error);
+        alert('Не удалось создать PDF. Проверьте загрузку библиотеки и попробуйте ещё раз.');
+      } finally {
+        pdf.remove();
+        button.disabled = false;
+        button.textContent = 'Сохранить в PDF';
+      }
+    });
+
+    $('palletSize').textContent = count(CONFIG.unitsPerPallet);
+    $('packSize').textContent = count(CONFIG.unitsPerPack);
+    $('truckSize').textContent = count(CONFIG.unitsPerTruck);
+    recalculate();
+  </script>
+</body>
+</html>
